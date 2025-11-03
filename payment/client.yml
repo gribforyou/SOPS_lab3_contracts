@@ -141,6 +141,7 @@ paths:
   /token/reset:
     post:
       summary: Получение нового токена по paymentArtifact
+      description: Возвращает новый токен для оплаты, деактивация токена происходит с задержкой
       tags:
         - Token
       requestBody:
