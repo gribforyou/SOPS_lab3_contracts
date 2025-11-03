@@ -1,0 +1,123 @@
+openapi: "3.0.0"
+info:
+  version: "0.0.1"
+  title: Проверка токена доступа
+  description: >
+    API для проверки, предоставляет ли токен доступ к указанному методу сервиса.
+
+paths:
+  /token/check:
+    post:
+      summary: Проверка доступа токена к методу сервиса
+      description: >
+        Проверяет, действителен ли токен и разрешён ли доступ 
+        к указанному методу указанного сервиса.
+      tags:
+        - Token
+      requestBody:
+        description: Данные для проверки доступа
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenCheckRequest'
+      responses:
+        '200':
+          description: Результат проверки доступа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenCheckResponse'
+        '400':
+          description: Некорректный запрос (отсутствуют обязательные поля)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: token, serviceName, and methodName are required
+        '401':
+          description: Токен недействителен или истёк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Invalid or expired token
+        '403':
+          description: Доступ к сервису или методу запрещён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Access to service or method is forbidden
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Internal server error
+
+components:
+  schemas:
+    TokenCheckRequest:
+      type: object
+      required:
+        - token
+        - serviceName
+        - methodName
+      properties:
+        token:
+          type: string
+          example: tkn_xyz987abc
+          description: Токен доступа, выданный после оплаты
+        serviceName:
+          type: string
+          example: Online marketplace
+          description: Название сервиса, к которому запрашивается доступ
+        methodName:
+          type: string
+          example: getInfo
+          description: Название метода, доступ к которому проверяется
+
+    TokenCheckResponse:
+      type: object
+      required:
+        - allowed
+        - serviceName
+        - methodName
+      properties:
+        allowed:
+          type: boolean
+          example: true
+          description: Доступ разрешён (true) или запрещён (false)
+        serviceName:
+          type: string
+          example: Online marketplace
+          description: Название проверенного сервиса
+        methodName:
+          type: string
+          example: getInfo
+          description: Название проверенного метода
+        paidUntil:
+          type: string
+          format: date
+          example: '2025-12-01'
+          description: Дата, до которой оплата действительна (если применимо)
+        message:
+          type: string
+          example: Access granted
+          description: Дополнительное пояснение результата проверки (опционально)
+
+    Error:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          example: Invalid token
+          description: Описание ошибки
