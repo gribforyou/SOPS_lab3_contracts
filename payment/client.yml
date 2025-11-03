@@ -1,0 +1,352 @@
+openapi: "3.0.0"
+info:
+  version: "0.0.1"
+  title: Сервис Оплаты
+  description: Описание апи для клиентов сервиса
+
+paths:
+  /bill:
+    post:
+      summary: Метод для выставления счета на оплату сервиса
+      tags:
+        - Payment
+      requestBody:
+        description: Тело сообщения
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetBillRequest'
+      responses:
+        '200':
+          description: Выставлен счет для оплаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBillResponse'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Service name is required
+        '404':
+          description: Сервис или метод не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Service with name not found
+        '500':
+          description: Сервис оплаты или реестр недоступны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Internal error
+
+  /pay:
+    post:
+      summary: Оплата счета
+      tags:
+        - Payment
+      requestBody:
+        description: Содержит артефакт оплаты
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayRequest'
+      responses:
+        '200':
+          description: Оплата прошла
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayResponse'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Payment artifact is required
+        '404':
+          description: Артифакт истек или несуществует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Artifact is not found
+        '500':
+          description: Сервис оплаты, реестр или целевой сервис недоступны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Internal error
+
+  /payment/info:
+    post:
+      summary: Получение информации об оплате по paymentArtifact
+      description: Возвращает дату окончания оплаты, доступные сервисы и методы
+      tags:
+        - Payment
+      requestBody:
+        description: Артефакт оплаты для получения информации
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInfoRequest'
+      responses:
+        '200':
+          description: Информация об оплате успешно получена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInfoResponse'
+        '400':
+          description: Некорректный запрос (например, отсутствует paymentArtifact)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: paymentArtifact is required
+        '404':
+          description: Оплата не найдена или артефакт недействителен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Payment info not found
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Internal server error
+
+  /token/reset:
+    post:
+      summary: Получение нового токена по paymentArtifact
+      tags:
+        - Token
+      requestBody:
+        description: Артефакт оплаты для получения токена
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Токен успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Некорректный запрос (например, отсутствует paymentArtifact)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: paymentArtifact is required
+        '404':
+          description: Артефакт не найден или истёк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Artifact not found or expired
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                description: Internal server error
+
+components:
+  schemas:
+    GetBillRequest:
+      type: object
+      required:
+        - serviceName
+        - dateFrom
+        - dateTo
+      properties:
+        serviceName:
+          type: string
+          example: Online marketplace
+          description: Берется из реестра сервисов
+        methods:
+          type: array
+          description: Берется из реестра сервисов. Может отсутствовать, в таком случае будут применены все методы сервиса
+          items:
+            type: string
+            description: Название метода, берется из реестра
+            example: getInfo
+        dateFrom:
+          type: string
+          format: date
+          description: Дата начала желаемого периода
+          example: '2025-11-01'
+        dateTo:
+          type: string
+          format: date
+          description: Дата окончания желаемого периода
+          example: '2025-11-13'
+
+    GetBillResponse:
+      type: object
+      required:
+        - serviceName
+        - dateFrom
+        - dateTo
+        - totalPrice
+        - paymentArtifact
+      properties:
+        serviceName:
+          type: string
+          example: Online marketplace
+          description: Берется из реестра сервисов
+        methods:
+          type: array
+          description: Берется из реестра сервисов. Может отсутствовать, в таком случае будут применены все методы сервиса
+          items:
+            type: object
+            required:
+              - methodName
+              - price
+            properties:
+              methodName:
+                type: string
+                description: Название метода
+                example: getInfo
+              price:
+                type: number
+                description: Цена метода за промежуток использования
+                example: 120.20
+        dateFrom:
+          type: string
+          format: date
+          description: Дата начала периода
+          example: '2025-11-01'
+        dateTo:
+          type: string
+          format: date
+          description: Дата окончания периода
+          example: '2025-11-13'
+        totalPrice:
+          type: number
+          description: Суммарная цена за все методы сервиса
+          example: 277.12
+        paymentArtifact:
+          type: string
+          description: Уникальный артифакт, по которому будет осуществляться оплата и обновление токена
+          example: dsWeWXkdsaaw12
+
+    Error:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          example: Service name is required
+          description: Описание ошибки
+
+    PayRequest:
+      type: object
+      required:
+        - paymentArtifact
+      properties:
+        paymentArtifact:
+          type: string
+          example: dsWeWXkdsaaw12
+          description: Артифакт выданный методом /bill
+
+    PayResponse:
+      type: object
+      required:
+        - message
+        - token
+      properties:
+        message:
+          type: string
+          example: Payment is succed
+          description: Результат попытки оплаты
+        token:
+          type: string
+          example: lwDsXVdksieu93
+          description: Токен для доступа к сервисам
+
+    TokenRequest:
+      type: object
+      required:
+        - paymentArtifact
+      properties:
+        paymentArtifact:
+          type: string
+          example: dsWeWXkdsaaw12
+          description: Артефакт, полученный при выставлении счета, используется для получения токена
+
+    TokenResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          example: tkn_xyz987abc
+          description: Токен доступа к сервису
+
+    PaymentInfoRequest:
+      type: object
+      required:
+        - paymentArtifact
+      properties:
+        paymentArtifact:
+          type: string
+          example: dsWeWXkdsaaw12
+          description: Уникальный артефакт, полученный при выставлении счета
+
+    PaymentInfoResponse:
+      type: object
+      required:
+        - paidUntil
+        - availableService
+        - methods
+      properties:
+        paidUntil:
+          type: string
+          format: date
+          example: '2025-12-01'
+          description: Дата, до которой оплата действительна
+        availableService:
+          type: string
+          example: Online marketplace
+          description: Название доступного сервиса
+        methods:
+          type: array
+          description: Список доступных методов сервиса
+          items:
+            type: string
+            example: getInfo
+            description: Название метода, доступного по оплате
